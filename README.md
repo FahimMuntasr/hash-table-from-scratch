@@ -255,8 +255,6 @@ The available operations are:
 6. Exit
 ```
 
-The random insertion feature is particularly useful for testing collisions and dynamic resizing.
-
 ---
 
 ## CLI Example
@@ -322,42 +320,6 @@ Successfully inserted 100 random values.
 ```
 
 This can be used to quickly populate the table and observe resizing and collision handling.
-
----
-
-## Compilation
-
-Make sure GCC is installed.
-
-On Ubuntu:
-
-```bash
-sudo apt install gcc
-```
-
-Compile the project with:
-
-```bash
-gcc -Wall -Wextra -std=c11 main.c hashtable.c prime.c -lm -o ../build/hashtable
-```
-
-The `-lm` flag links the math library used by the hashing implementation.
-
----
-
-## Running
-
-From the appropriate directory:
-
-```bash
-../build/hashtable
-```
-
-or, if the executable is in the current directory:
-
-```bash
-./hashtable
-```
 
 ---
 
@@ -446,7 +408,7 @@ The worst case occurs when many keys collide and a large portion of the table mu
 
 ## Learning Goals
 
-This project was built to understand how hash tables work internally rather than relying on a pre-existing implementation.
+This project was built to understand how hash tables work internally.
 
 It demonstrates concepts including:
 
@@ -485,9 +447,3 @@ Possible improvements include:
 * More efficient integer-based hashing
 
 ---
-
-## License
-
-This project is intended primarily as an educational implementation for learning data structures and low-level programming in C.
-
-```
