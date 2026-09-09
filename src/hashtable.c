@@ -2,11 +2,50 @@
 #include <stdlib.h>
 #include <string.h>
 #include "hashtable.h"
+#include "prime.h"
 #define HT_INITIAL_BASE_SIZE 53
 #define HT_PRIME_1 151
 #define HT_PRIME_2 163
 
 static ht_item HT_DELETED_ITEM = {NULL, NULL};
+
+static void ht_resize_up(ht_hash_table* ht);
+static void ht_resize_down(ht_hash_table* ht);
+static void ht_resize(ht_hash_table* ht, const int base_size);
+
+static void* xmalloc(size_t size) {
+    void* p = malloc(size);
+
+    if (p == NULL) {
+        exit(EXIT_FAILURE);
+    }
+
+    return p;
+}
+
+static void* xcalloc(size_t count, size_t size) {
+    void* p = calloc(count, size);
+
+    if (p == NULL) {
+        exit(EXIT_FAILURE);
+    }
+
+    return p;
+}
+
+static char* ht_strdup(const char* str) {
+    size_t len = strlen(str) + 1;
+
+    char* copy = malloc(len);
+
+    if (copy == NULL) {
+        return NULL;
+    }
+
+    memcpy(copy, str, len);
+
+    return copy;
+}
 
 static ht_item* ht_new_item(const char* k, const char* v) {
     ht_item* item = malloc(sizeof(ht_item));
@@ -15,8 +54,8 @@ static ht_item* ht_new_item(const char* k, const char* v) {
         return NULL;
     }
 
-    item->key = strdup(k);
-    item->value = strdup(v);
+    item->key = ht_strdup(k);
+    item->value = ht_strdup(v);
 
     if (item->key == NULL || item->value == NULL) {
         free(item->key);
@@ -69,11 +108,7 @@ void ht_insert(ht_hash_table* ht, const char* key, const char* value){
   }
   ht_item* item = ht_new_item(key, value);
 
-  int index = ht_get_hash(item->key, ht->size, 0);
-  ht_item* cur_item = ht->items[index];
-  
-  int i = 1;
-  int index = ht_get_hash(key, ht->size, 0);
+  int index = ht_get_hash(item->key, ht->size, 0); 
   int i = 1;
   int deleted_index = -1;
 
@@ -205,22 +240,3 @@ static void ht_resize_down(ht_hash_table* ht) {
     ht_resize(ht, new_size);
 }
 
-static void* xmalloc(size_t size) {
-    void* p = malloc(size);
-
-    if (p == NULL) {
-        exit(EXIT_FAILURE);
-    }
-
-    return p;
-}
-
-static void* xcalloc(size_t count, size_t size) {
-    void* p = calloc(count, size);
-
-    if (p == NULL) {
-        exit(EXIT_FAILURE);
-    }
-
-    return p;
-}
