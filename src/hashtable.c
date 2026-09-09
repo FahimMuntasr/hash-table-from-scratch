@@ -1,13 +1,30 @@
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include "hashtable.h"
+#define HT_INITIAL_BASE_SIZE 53
+#define HT_PRIME_1 151
+#define HT_PRIME_2 163
 
-static ht_item HT_DELETED_ITEM = {NULL, NULL}
+static ht_item HT_DELETED_ITEM = {NULL, NULL};
 
 static ht_item* ht_new_item(const char* k, const char* v) {
     ht_item* item = malloc(sizeof(ht_item));
+
+    if (item == NULL) {
+        return NULL;
+    }
+
     item->key = strdup(k);
     item->value = strdup(v);
+
+    if (item->key == NULL || item->value == NULL) {
+        free(item->key);
+        free(item->value);
+        free(item);
+        return NULL;
+    }
+
     return item;
 }
 
@@ -20,7 +37,7 @@ static void ht_del_item(ht_item* item){
 void ht_del_hash_table(ht_hash_table* table){
     for(int i=0; i<table->size; i++){
         ht_item* item = table->items[i];
-        if(item != NULL){
+        if(item != NULL && item != &HT_DELETED_ITEM){
             ht_del_item(item);
         }
     }
@@ -31,9 +48,10 @@ void ht_del_hash_table(ht_hash_table* table){
 static int ht_hash(const char* s, const int a, const int m){
   long hash = 0;
   const int len_s = strlen(s);
+
   for(int i=0;i<len_s;i++){
-    hash+=(long)pow(a, len_s - (i+1)*s[i]);
-    hash = hash % m;
+    hash += (long)pow(a, len_s - (i+1))*s[i];
+    hash %= m;
   }
   return (int)hash;
 }
@@ -55,22 +73,31 @@ void ht_insert(ht_hash_table* ht, const char* key, const char* value){
   ht_item* cur_item = ht->items[index];
   
   int i = 1;
-  
-  while (cur_item != NULL){
+  int index = ht_get_hash(key, ht->size, 0);
+  int i = 1;
+  int deleted_index = -1;
 
-    if(cur_item != &HT_DELETED_ITEM){
-      if(strcmp(cur_item->key,key)==0){
-        ht_del_item(cur_item);
-        ht->items[index]=item;
-        return;
+  while (ht->items[index] != NULL) {
+
+    if (ht->items[index] == &HT_DELETED_ITEM) {
+      if (deleted_index == -1) {
+        deleted_index = index;
       }
     }
+    else if (strcmp(ht->items[index]->key, key) == 0) {
+      ht_del_item(ht->items[index]);
+      ht->items[index] = item;
+      return;
+    }
 
-    index = ht_get_hash(item->key, ht->size, i);
-    cur_item = ht->items[index];
+    index = ht_get_hash(key, ht->size, i);
     i++;
   }
-  
+
+  if (deleted_index != -1) {
+      index = deleted_index;
+  }
+
   ht->items[index] = item;
   ht->count++;
 }
@@ -94,27 +121,35 @@ char* ht_search(ht_hash_table* ht, const char* key){
   return NULL;
 }
 
-void ht_delete(ht_hash_table* ht, const char* key){
-  const int load = ht->count * 100 / ht->size;
-  if(load < 10){
-    ht_resize_down(ht);
-  }
-  int index = ht_get_hash(key, ht->size, 0);
-  ht_item* item = ht->items[index];
-  int i = 1;
-  while(item != NULL){
-    if(item != &HT_DELETED_ITEM){
-      if(strcmp(item->key, key)==0){
-        ht_del_item(item);
-        ht->items[index] = &HT_DELETED_ITEM;
-      }
+void ht_delete(ht_hash_table* ht, const char* key) {
+    int index = ht_get_hash(key, ht->size, 0);
+    ht_item* item = ht->items[index];
+
+    int i = 1;
+
+    while (item != NULL) {
+
+        if (item != &HT_DELETED_ITEM) {
+
+            if (strcmp(item->key, key) == 0) {
+                ht_del_item(item);
+                ht->items[index] = &HT_DELETED_ITEM;
+                ht->count--;
+
+                if (ht->count * 100 / ht->size < 10) {
+                    ht_resize_down(ht);
+                }
+
+                return;
+            }
+        }
+
+        index = ht_get_hash(key, ht->size, i);
+        item = ht->items[index];
+        i++;
     }
-    index = ht_get_hash(key, ht->size, i);
-    item = ht->items[index];
-    i++;
-  }
-  ht->count--;
 }
+
 
 static ht_hash_table* ht_new_sized(const int base_size) {
     ht_hash_table* ht = xmalloc(sizeof(ht_hash_table));
@@ -168,4 +203,24 @@ static void ht_resize_up(ht_hash_table* ht) {
 static void ht_resize_down(ht_hash_table* ht) {
     const int new_size = ht->base_size / 2;
     ht_resize(ht, new_size);
+}
+
+static void* xmalloc(size_t size) {
+    void* p = malloc(size);
+
+    if (p == NULL) {
+        exit(EXIT_FAILURE);
+    }
+
+    return p;
+}
+
+static void* xcalloc(size_t count, size_t size) {
+    void* p = calloc(count, size);
+
+    if (p == NULL) {
+        exit(EXIT_FAILURE);
+    }
+
+    return p;
 }
